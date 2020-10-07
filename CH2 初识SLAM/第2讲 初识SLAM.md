@@ -125,3 +125,132 @@ Hello SLAM!
 
 ### 2.3.3 使用cmake
 
+理论上说, 任意一个 C++ 程序都可以用 g++ 来编译. 但当程序规模越来越大时, 一个工程可能有许多个文件夹和源文件, 这时输入的编译命令将越来越长. 通常一个小型 C++ 项目可能含有十几个类, 各类间还存在着复杂的依赖关系. 其中一部分要**编译成可执行文件**, 另一部分**编译成库文件**. 如果仅靠 g++ 命令, 我们需要输入大量的编译指令, 整个编译过程会变得异常烦琐. 因此, 对于 C++ 项目, 使用一些**工程管理工具**会更加高效. 在历史上工程师们曾使用 `makefile` 进行自动编译, 但下面要谈的 cmake 比它更加方便. 并且我们会看到后面提到的大多数库都使用 cmake 来管理源代码.
+在一个 cmake 工程中, 我们会用 cmake 命令生成一个 makefile 文件, 然后, 用 make 命令根据这个 makefile 文件的内容编译整个工程. 读者可能还不知道 makefile 是什么东西, 不过没关系, 我们会通过例子来学习. 仍然以上面的 `helloSLAM.cpp` 为例, 这次我们不是直接使用 g++, 而是用 cmake 来制作一个工程, 然后再编译它. 在 `slambook/ch2/` 中新建一个 `CMakeLists.txt` 文件, 内容如下:
+
+```txt
+#slambook/ch2/CMakeLists.txt
+cmake_minimum_required( VERSION 2.8 )
+
+# 声明一个 cmake 工程
+project( HelloSLAM )
+
+# 添加一个可执行程序
+# 语法: add_executable( 程序名 源代码文件 )
+add_executable( helloSLAM helloSLAM.cpp )
+```
+
+`CMakeLists.txt` 文件用于告诉 cmake 我们**要对这个目录下的文件作什么事情**. `CMakeLists.txt` 文件的内容需要遵守 cmake 的语法. 这个示例中, 我们演示了最基本的工程: 指定一个工程名和一个可执行程序. 根据注释, 读者应该理解每句话做了些什么.
+
+现在, 在当前目录下 (`slambook/ch2/`), 调用 cmake 对该工程进行分析:
+
+```txt
+cmake .
+```
+
+cmake 会输出一些编译信息, 然后在当前目录下生成一些中间文件, 其中最重要的就是 `MakeFile`. 由于 `MakeFile` 是自动生成的, 我们不必修改它. 现在, 用 make 命令对工程进行编译:
+
+```cmake
+% make
+Scanning dependencies of target helloSLAM
+[100%] Building CXX object CMakeFiles/helloSLAM.dir/helloSLAM.cpp.o
+Linking CXX executable helloSLAM
+[100%] Built target helloSLAM
+```
+
+编译过程中会输出一个编译进度. 如果顺利通过, 我们就可以得到在 `CMakeLists.txt` 中声明的那个可执行程序 helloSLAM. 执行它:
+
+```cmake
+% ./helloSLAM
+Hello SLAM!
+```
+
+因为我们并没有修改源代码, 所以得到的结果和之前是一样的. 请读者想想这种做法和之前直接使用 g++ 编译的区别. 这次我们用 cmake-make 的做法, cmake 过程处理了工程文件之间的关系, 而 make 过程实际调用了 g++ 来编译程序. 虽然这个过程中多了调用 cmake 和 make 的步骤, 但我们**对项目的编译管理工作, 从输入一串 g++ 命令变成了维护若干个比较直观的 `CMakeLists.txt` 文件**, 这将明显降低维护整个工程的难度. 比如想新增一个可执行文件, 只需在 `CMakeLists.txt` 中添加一行 `add_executable` 命令即可, 而后续的步骤是不变的. cmake 会帮我们解决代码的依赖关系, 而无须输入一大串 g++ 命令.
+
+现在这个过程中唯一让我们不满的是, cmake 生成的中间文件还留在我们的代码文件当中. 当想要发布代码时, 我们并不希望把这些中间文件一同发布出去. 这时我们还需要把它们一个个删除, 十分不便. 一种更好的做法是让这些中间文件都放在一个中间目录中, 在编译成功后, 把这个中间目录删除即可. 所以, 更常见的编译 cmake 工作的做法如何:
+
+```cmake
+mkdir build
+cd build
+cmake ..
+make
+```
+
+我们新建了一个中间文件夹 `build`, 然后进入 `build` 文件夹, 通过 `cmake ..` 命令对上一层文件夹, 也就是代码所在的文件夹进行编译. 这样, cmake 产生的中间文件就会生成在 `build` 文件夹中, 与源代码分开. 当发布源代码时, 只要把 `build` 文件夹删掉即可.
+
+### 2.3.4 使用库
+
+在一个 C++ 工程中, 并不是所有代码都会编译成可执行文件. **只有带有 `main` 函数的文件才会生成可执行程序**. 而另一些代码, 我们只想把它们打包成一个东西, 供其他程序调用. 这个东西叫作**库**.
+
+一个库往往是许多算法、程序的集合. 例如, OpenCV 库提供了许多计算机视觉相关的算法, 而 Eigen 库提供了矩阵代数的计算. 因此, 我们要学习如何使用 cmake 生成库, 并且使用库中的函数. 现在书写如下 `libHelloSLAM.cpp` 文件:
+
+```c++
+//slambook/ch2/libHelloSLAM.cpp
+//这是一个库文件
+#include <iostream>
+using namespace std;
+void printHello(){
+	cout << "Hello SLAM" << endl;
+}
+```
+
+这个库提供了一个 `printHello` 函数, 调用此函数讲输出一条信息. 但是它没有 `main` 函数, 这意味着这个库中没有可执行文件. 我们在 `CMakeLists.txt` 里加上如下内容:
+
+```cmake
+add_library( hello libHelloSLAM.cpp )
+```
+
+这条命令告诉 cmake, 我们想把这个文件**编译成一个叫作"hello"的库**. 然后和上面一样, 使用 cmake 编译整个工程:
+
+```cmake
+cd build
+cmake ..
+make
+```
+
+这时, 在 `build` 文件夹中就会生成一个 `libhello.a` 文件, 这就是我们得到的库. 在 Linux 中, 库文件分成**静态库**和**共享库**两种. 静态库以 `.a` 作为后缀名, 共享库以 `.so` 结尾. 所有库都是一些函数打包后的集合, 差别在于**静态库每次被调用都会生成一个副本, 而共享库则只有一个副本, 更省空间.** 如果想生成共享库而不是静态库, 只需使用以下语句即可:
+
+```cmake
+add_library(hello_shared SHARED libHelloSLAM.cpp)
+```
+
+此时得到的文件就是 `libhello_shared.so` 了. 
+
+库文件是一个压缩包, 里面有**编译好的二进制函数.** 不过如果仅有 `.a` 或 `.so` 库文件, 那么我们并不知道里面的函数到底是什么, 调用的形式又是什么样. 为了让别人 (或者自己) 使用这个库, 我们需要提供一个头文件, 说明这个库里都有些什么. 因此, 对于库的使用者, **只要拿到了头文件和库文件, 就可以调用这个库了.** 下面编写 libhello 的头文件:
+
+```c
+//slambook/ch2/libHelloSLAM.h
+
+#ifndef LIBHELLOSLAM_H_
+#define LIBHELLOSLAM_H_
+void printHello();
+#endif
+```
+
+这样, 根据这个文件和我们刚才编译得到的库文件, 就可以使用 `printHello` 函数了. 下面写一个可执行程序来调用这个简单的函数:
+
+```c
+//slambook/ch2/useHello.cpp
+#include "libHelloSLAM.h"
+int main( int argc, char** argv ){
+	printHello();
+    return 0;
+}
+```
+
+然后在 `CMakeLists.txt` 中添加一个可执行程序的生成命令, **链接**到刚才使用的库上:
+
+```cmake
+add_executable( useHello useHello.cpp )
+target_link_libraries( useHello hello_shared )
+```
+
+通过这两行语句, useHello 程序就能顺利使用 hello_shared 库中的代码了. 这个小例子演示了如何生成并调用一个库. **对于他人提供的库**, 我们也可以用同样的方式对它们进行调用, 整合到自己的程序中. 
+
+除了已经演示的功能之外, cmake 还有许多语法和选项, 这里不一一列举了. 习题中包含了一些 cmake 的阅读材料. 回顾一下我们之前做了哪些事:
+
+1. 首先, 程序代码由头文件和源文件组成;
+2. 带有 `main` 函数的源文件编译成可执行程序, 其他的编译成库文件;
+3. 如果可执行程序想调用库文件中的函数, 它需要参考该库提供的头文件, 以明白调用的格式. 同时, 要把可执行程序**链接**到库文件上.
+
+### 2.3.5 使用IDE
