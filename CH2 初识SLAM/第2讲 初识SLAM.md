@@ -254,3 +254,22 @@ target_link_libraries( useHello hello_shared )
 3. 如果可执行程序想调用库文件中的函数, 它需要参考该库提供的头文件, 以明白调用的格式. 同时, 要把可执行程序**链接**到库文件上.
 
 ### 2.3.5 使用IDE
+
+`Kdevelop` 的优点列举如下:
+
+1. 支持 cmake 工程;
+2. 对 C++ 支持较好 (包括 11 标准). 有高亮、跳转、补全等功能. 能自动排版代码;
+3. 能方便地看到各个文件和目录树;
+4. 有一键编译、断点调试等功能;
+5. 无需付费.
+
+## 2.4 习题
+
+1. `g++` 命令有哪些参数? 怎么填写参数可以更改生成的程序文件名?
+2. 使用 `build` 文件夹来编译 cmake 工程, 然后在 `Kdevelop` 中试试;
+3. 如果忘了把库链接到可执行程序上, 编译会报错吗? 报什么错?
+4. 阅读《cmake 实践》, 了解 cmake 的其他语法;
+5. 完善 hello SLAM 小程序, 把它做成一个小程序库, 安装到本地硬盘中. 然后, 新建一个工程, 使用 find_package 找这个库并调用;
+6. 寻找其他 cmake 教学材料, 深入了解 cmake, 例如 [https://github.com/TheErk/CMake-tutorial](https://github.com/TheErk/CMake-tutorial);
+7. 找到 `Kdevelop` 的官网, 看看它还有哪些特性;
+8. 尝试学习 `Vim`, 试试 `Kdevelop` 的 `Vim` 编辑功能;
